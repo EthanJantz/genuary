@@ -2,8 +2,13 @@ import p5 from "p5";
 import Hydra from "hydra-synth";
 
 // Initialize Hydra
-const hydra = new Hydra({ detectAudio: false });
-const { s0, src, o0, o1, render, time, mouse } = hydra.synth;
+const hydra = new Hydra({
+  detectAudio: false,
+  width: window.innerWidth,
+  height: window.innerHeight,
+});
+const { s0, src, o0, o1, render } = hydra.synth;
+const time = () => hydra.synth.time;
 
 function generatePalette(inputString, hueSeed) {
   const palette = [];
@@ -47,12 +52,13 @@ const sketch = (p) => {
 
     // Initialize Hydra source with p5 canvas
     s0.init({ src: p.canvas });
+    p.canvas.style.display = "none";
 
     // Hydra pipeline
     src(s0).out(o0);
 
     src(o0)
-      .rotate(() => time % 360)
+      .rotate(() => time() % 360)
       .modulateKaleid(src(o1))
       .out(o1);
 

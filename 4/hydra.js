@@ -2,7 +2,11 @@ import p5 from "p5";
 import Hydra from "hydra-synth";
 
 // Initialize Hydra
-const hydra = new Hydra({ detectAudio: false });
+const hydra = new Hydra({
+  detectAudio: false,
+  width: window.innerWidth,
+  height: window.innerHeight,
+});
 const { s0, src, noise, o0, o1, render } = hydra.synth;
 
 let coneTexture;
@@ -21,6 +25,7 @@ const sketch = (p) => {
 
     // Initialize Hydra source with p5 canvas
     s0.init({ src: p.canvas });
+    p.canvas.style.display = "none";
 
     // Hydra pipeline
     src(s0).out(o0);
