@@ -1,0 +1,243 @@
+import p5 from "p5";
+import Hydra from "hydra-synth";
+
+// Initialize Hydra
+const hydra = new Hydra({ detectAudio: false });
+const { s0, src, o0, render } = hydra.synth;
+
+class Boid {
+  constructor(p, x, y) {
+    this.p = p;
+    this.pos = p.createVector(x, y);
+    this.vel = p5.Vector.random2D().mult(p.random(2, 4));
+    this.acc = p.createVector();
+    this.maxForce = 0.2;
+    this.maxSpeed = 4;
+    this.size = 4;
+
+    // Orbital state
+    this.orbitCenter = p.createVector();
+    this.orbitRadius = 0;
+    this.orbitAngle = 0;
+    this.orbitSpeed = 0;
+  }
+
+  // Boid flocking behaviors
+  align(boids) {
+    let steering = this.p.createVector();
+    let total = 0;
+    const perceptionRadius = 50;
+
+    for (let other of boids) {
+      let d = p5.Vector.dist(this.pos, other.pos);
+      if (other !== this && d < perceptionRadius) {
+        steering.add(other.vel);
+        total++;
+      }
+    }
+    if (total > 0) {
+      steering.div(total);
+      steering.setMag(this.maxSpeed);
+      steering.sub(this.vel);
+      steering.limit(this.maxForce);
+    }
+    return steering;
+  }
+
+  cohesion(boids) {
+    let steering = this.p.createVector();
+    let total = 0;
+    const perceptionRadius = 50;
+
+    for (let other of boids) {
+      let d = p5.Vector.dist(this.pos, other.pos);
+      if (other !== this && d < perceptionRadius) {
+        steering.add(other.pos);
+        total++;
+      }
+    }
+    if (total > 0) {
+      steering.div(total);
+      steering.sub(this.pos);
+      steering.setMag(this.maxSpeed);
+      steering.sub(this.vel);
+      steering.limit(this.maxForce);
+    }
+    return steering;
+  }
+
+  separation(boids) {
+    let steering = this.p.createVector();
+    let total = 0;
+    const perceptionRadius = 25;
+
+    for (let other of boids) {
+      let d = p5.Vector.dist(this.pos, other.pos);
+      if (other !== this && d < perceptionRadius) {
+        let diff = p5.Vector.sub(this.pos, other.pos);
+        diff.div(d * d);
+        steering.add(diff);
+        total++;
+      }
+    }
+    if (total > 0) {
+      steering.div(total);
+      steering.setMag(this.maxSpeed);
+      steering.sub(this.vel);
+      steering.limit(this.maxForce);
+    }
+    return steering;
+  }
+
+  flock(boids) {
+    let alignment = this.align(boids);
+    let cohesion = this.cohesion(boids);
+    let separation = this.separation(boids);
+
+    this.acc.add(alignment);
+    this.acc.add(cohesion);
+    this.acc.add(separation.mult(1.5));
+  }
+
+  // Orbital star behavior
+  initOrbit() {
+    this.orbitRadius = this.p.random(20, 80);
+    this.orbitAngle = this.p.random(this.p.TWO_PI);
+    this.orbitSpeed =
+      this.p.random(0.005, 0.02) * (this.p.random() > 0.5 ? 1 : -1);
+
+    this.orbitCenter = this.p.createVector(
+      this.pos.x - Math.cos(this.orbitAngle) * this.orbitRadius,
+      this.pos.y - Math.sin(this.orbitAngle) * this.orbitRadius,
+    );
+  }
+
+  moveOrbital() {
+    this.orbitAngle += this.orbitSpeed;
+    this.pos.x =
+      this.orbitCenter.x + Math.cos(this.orbitAngle) * this.orbitRadius;
+    this.pos.y =
+      this.orbitCenter.y + Math.sin(this.orbitAngle) * this.orbitRadius;
+  }
+
+  transitionToOrbit() {
+    this.initOrbit();
+  }
+
+  transitionToBoid() {
+    let tangentAngle =
+      this.orbitAngle +
+      (this.orbitSpeed > 0 ? this.p.HALF_PI : -this.p.HALF_PI);
+    let speed = Math.abs(this.orbitSpeed) * this.orbitRadius * 60;
+    this.vel = this.p
+      .createVector(Math.cos(tangentAngle), Math.sin(tangentAngle))
+      .mult(speed);
+    this.vel.limit(this.maxSpeed);
+  }
+
+  update(blend, boids) {
+    if (blend < 0.5) {
+      this.flock(boids);
+      this.vel.add(this.acc);
+      this.vel.limit(this.maxSpeed);
+      this.pos.add(this.vel);
+      this.acc.mult(0);
+
+      if (this.pos.x > this.p.width) this.pos.x = 0;
+      if (this.pos.x < 0) this.pos.x = this.p.width;
+      if (this.pos.y > this.p.height) this.pos.y = 0;
+      if (this.pos.y < 0) this.pos.y = this.p.height;
+    } else {
+      this.moveOrbital();
+    }
+  }
+
+  draw(blend) {
+    let col = this.p.lerpColor(this.p.color(30), this.p.color(255), blend);
+    this.p.fill(col);
+    this.p.noStroke();
+
+    if (blend < 0.5) {
+      let angle = this.vel.heading();
+      this.p.push();
+      this.p.translate(this.pos.x, this.pos.y);
+      this.p.rotate(angle);
+      this.p.triangle(
+        this.size * 2,
+        0,
+        -this.size,
+        -this.size,
+        -this.size,
+        this.size,
+      );
+      this.p.pop();
+    } else {
+      let twinkle = this.p.map(
+        Math.sin(this.p.frameCount * 0.1 + this.orbitAngle * 10),
+        -1,
+        1,
+        0.5,
+        1,
+      );
+      this.p.push();
+      this.p.translate(this.pos.x, this.pos.y);
+      this.p.ellipse(0, 0, this.size * 2 * twinkle, this.size * 2 * twinkle);
+      this.p.pop();
+    }
+  }
+}
+
+const boids = [];
+const numBoids = 100;
+let dayNightCycle = 0;
+let cycleSpeed = 0.002;
+let wasNight = false;
+
+const sketch = (p) => {
+  p.setup = () => {
+    p.createCanvas(p.windowWidth, p.windowHeight);
+
+    for (let i = 0; i < numBoids; i++) {
+      boids.push(new Boid(p, p.random(p.width), p.random(p.height)));
+    }
+
+    // Initialize Hydra source with p5 canvas
+    s0.init({ src: p.canvas });
+
+    // Hydra pipeline
+    src(s0)
+      .blend(src(o0).scale(1.01), () => dayNightCycle * 0.3)
+      .out(o0);
+
+    render(o0);
+  };
+
+  p.draw = () => {
+    dayNightCycle = (Math.sin(p.frameCount * cycleSpeed) + 1) / 2;
+
+    // Semi-transparent background for trails
+    let bgColor = p.lerp(255, 0, dayNightCycle);
+    p.fill(bgColor, 15);
+    p.noStroke();
+    p.rect(0, 0, p.width, p.height);
+
+    let isNight = dayNightCycle >= 0.5;
+    if (isNight !== wasNight) {
+      for (let boid of boids) {
+        if (isNight) {
+          boid.transitionToOrbit();
+        } else {
+          boid.transitionToBoid();
+        }
+      }
+      wasNight = isNight;
+    }
+
+    for (let boid of boids) {
+      boid.update(dayNightCycle, boids);
+      boid.draw(dayNightCycle);
+    }
+  };
+};
+
+new p5(sketch);

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Genuary 2026</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 2rem;
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #fff;
+      min-height: 100vh;
+    }
+    h1 {
+      margin: 0 0 2rem;
+      font-weight: 300;
+      font-size: 2rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.5rem;
+    }
+    .card {
+      display: block;
+      background: #222;
+      border-radius: 8px;
+      padding: 2rem;
+      text-decoration: none;
+      color: #fff;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .card:hover {
+      background: #333;
+      transform: translateY(-2px);
+    }
+    .day {
+      font-size: 3rem;
+      font-weight: 200;
+      margin-bottom: 0.5rem;
+    }
+    .title {
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <h1>Genuary 2026</h1>
+  <div class="grid">
+    <a href="1/" class="card">
+      <div class="day">01</div>
+      <div class="title">Flocking Shapes</div>
+    </a>
+    <a href="2/" class="card">
+      <div class="day">02</div>
+      <div class="title">Particle Trails</div>
+    </a>
+    <a href="3/" class="card">
+      <div class="day">03</div>
+      <div class="title">Fibonacci Spirals</div>
+    </a>
+    <a href="4/" class="card">
+      <div class="day">04</div>
+      <div class="title">Traffic Cones</div>
+    </a>
+    <a href="5/" class="card">
+      <div class="day">05</div>
+      <div class="title">Gravity Particles</div>
+    </a>
+    <a href="6/" class="card">
+      <div class="day">06</div>
+      <div class="title">Boid Simulation</div>
+    </a>
+    <a href="7/" class="card">
+      <div class="day">07</div>
+      <div class="title">XOR Shader</div>
+    </a>
+  </div>
+</body>
+</html>
