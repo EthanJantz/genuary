@@ -1,6 +1,5 @@
 import p5 from "p5";
 
-// Vertex shader - just passes coordinates through
 const vertShader = `#version 300 es
 in vec3 aPosition;
 in vec2 aTexCoord;
@@ -14,7 +13,6 @@ void main() {
 }
 `;
 
-// Fragment shader - does the XOR operation
 const fragShader = `#version 300 es
 precision highp float;
 
