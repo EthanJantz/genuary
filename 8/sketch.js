@@ -10,12 +10,19 @@ class Node {
 const sketch = (p) => {
   let nodes = [];
   let boundary;
-  const minDist = 50;
+  let minDist;
+  const targetNodes = 80;
   const candidatesPerNode = 30;
 
-  // Check if a point is inside the boundary (circle)
+  // Check if a point is inside the boundary (ellipse)
   const isInBoundary = (pos) => {
-    return p.dist(pos.x, pos.y, boundary.x, boundary.y) < boundary.r;
+    const dx = pos.x - boundary.x;
+    const dy = pos.y - boundary.y;
+    return (
+      (dx * dx) / (boundary.rx * boundary.rx) +
+        (dy * dy) / (boundary.ry * boundary.ry) <
+      1
+    );
   };
 
   // Check if a point is far enough from all existing nodes
@@ -121,6 +128,30 @@ const sketch = (p) => {
     return edges;
   };
 
+  // Check if adding edge would create a small angle at either endpoint
+  const wouldCreateSmallAngle = (nodeA, nodeB, minDot = 0.9) => {
+    const edgeDir = p5.Vector.sub(nodeB.pos, nodeA.pos).normalize();
+
+    // Check angles at nodeA
+    for (let neighbor of nodeA.edges) {
+      const existingDir = p5.Vector.sub(neighbor.pos, nodeA.pos).normalize();
+      if (Math.abs(edgeDir.dot(existingDir)) > minDot) {
+        return true;
+      }
+    }
+
+    // Check angles at nodeB
+    const reversedDir = edgeDir.copy().mult(-1);
+    for (let neighbor of nodeB.edges) {
+      const existingDir = p5.Vector.sub(neighbor.pos, nodeB.pos).normalize();
+      if (Math.abs(reversedDir.dot(existingDir)) > minDot) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   // Find best node to connect to given constraints
   const findBestNode = (fromNode, direction) => {
     let candidates = [];
@@ -131,6 +162,7 @@ const sketch = (p) => {
       if (edgeExists(fromNode, node)) continue; // No doubling up
       if (wouldCreateTriangle(fromNode, node)) continue; // No triangles
       if (wouldCross(fromNode, node)) continue; // No crossings
+      if (wouldCreateSmallAngle(fromNode, node)) continue; // No small angles
 
       candidates.push(node);
     }
@@ -186,6 +218,60 @@ const sketch = (p) => {
     return edgesCreated;
   };
 
+  // Compute convex hull using gift wrapping algorithm
+  const getConvexHull = () => {
+    if (nodes.length < 3) return nodes;
+
+    // Find leftmost node
+    let start = nodes[0];
+    for (let node of nodes) {
+      if (node.pos.x < start.pos.x) start = node;
+    }
+
+    const hull = [];
+    let current = start;
+
+    do {
+      hull.push(current);
+      let next = nodes[0];
+
+      for (let node of nodes) {
+        if (node === current) continue;
+        if (next === current) {
+          next = node;
+          continue;
+        }
+
+        // Cross product to determine turn direction
+        const cross =
+          (next.pos.x - current.pos.x) * (node.pos.y - current.pos.y) -
+          (next.pos.y - current.pos.y) * (node.pos.x - current.pos.x);
+
+        if (cross < 0) {
+          next = node;
+        }
+      }
+
+      current = next;
+    } while (current !== start);
+
+    return hull;
+  };
+
+  // Connect all convex hull nodes to form outer boundary
+  const connectHull = () => {
+    const hull = getConvexHull();
+    for (let i = 0; i < hull.length; i++) {
+      const a = hull[i];
+      const b = hull[(i + 1) % hull.length];
+
+      if (!edgeExists(a, b)) {
+        a.edges.push(b);
+        b.edges.push(a);
+      }
+    }
+  };
+
   // Generate all edges
   const generateEdges = () => {
     const openList = [...nodes];
@@ -216,10 +302,18 @@ const sketch = (p) => {
     boundary = {
       x: p.windowWidth / 2,
       y: p.windowHeight / 2,
-      r: p.min(p.windowWidth, p.windowHeight) * 0.4,
+      rx: p.windowWidth * 0.4,
+      ry: p.windowHeight * 0.4,
     };
+
+    // Calculate minDist based on boundary area and target node count
+    const area = Math.PI * boundary.rx * boundary.ry;
+    minDist = Math.sqrt(area / targetNodes);
+
     generateNodes();
     generateEdges();
+    connectHull();
+
     // Remove isolated nodes and dead ends (degree 1)
     let changed = true;
     while (changed) {
@@ -236,9 +330,6 @@ const sketch = (p) => {
         }
       }
     }
-    console.log(
-      `Generated ${nodes.length} nodes and ${getEdges().length} edges`,
-    );
   };
 
   p.draw = () => {
@@ -248,7 +339,7 @@ const sketch = (p) => {
     p.noFill();
     p.stroke(150);
     p.strokeWeight(2);
-    p.circle(boundary.x, boundary.y, boundary.r * 2);
+    //p.ellipse(boundary.x, boundary.y, boundary.rx * 2, boundary.ry * 2);
 
     // Draw edges
     p.stroke(0);
@@ -256,13 +347,6 @@ const sketch = (p) => {
     for (let [a, b] of getEdges()) {
       p.line(a.pos.x, a.pos.y, b.pos.x, b.pos.y);
     }
-
-    // Draw nodes
-    //     p.fill(0);
-    //     p.noStroke();
-    //     for (let node of nodes) {
-    //       p.circle(node.pos.x, node.pos.y, 8);
-    //     }
   };
 };
 
