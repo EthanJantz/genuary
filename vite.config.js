@@ -16,6 +16,7 @@ export default defineConfig({
         day5: "5/index.html",
         day6: "6/index.html",
         day7: "7/index.html",
+        day8: "8/index.html",
       },
     },
   },
